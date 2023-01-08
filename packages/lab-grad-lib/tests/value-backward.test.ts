@@ -1,4 +1,4 @@
-import { newVal } from "../Value";
+import { newVal } from "../src/Value";
 
 test('1 + 2 backward works correctly', () => {
     const v = newVal(1).add(2);

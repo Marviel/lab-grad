@@ -1,2 +1,2 @@
-export * from './src/value.ts';
+export * from './src/Value';
 

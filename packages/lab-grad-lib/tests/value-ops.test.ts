@@ -1,4 +1,4 @@
-import { newVal, Value } from '../Value'
+import { newVal, Value } from '../src/Value'
 
 test('adds 1 + 2 to equal 3', () => {
     expect(newVal(1).add(2).data).toBe(3);

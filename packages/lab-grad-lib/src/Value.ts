@@ -185,16 +185,30 @@ export class Value {
         return this.add(vOther.neg());
     }
 
+    /**
+     * Computes `this.data / other.data`, and returns a Value object representing the result.
+     * @param other 
+     * @returns 
+     */
     public div(other: Value | number): Value {
         const vOther = other instanceof Value ? other : new Value(other)
         return this.mult(vOther.pow(-1));
     }
 
+    /**
+     * Computes `other.data / this.data`, and returns a Value object representing the result.
+     * @param other The numerator of the division. Will be converted to a Value object if it is not already one.
+     * @returns 
+     */
     public rev_div(other: Value | number): Value {
         const vOther = other instanceof Value ? other : new Value(other)
         return vOther.mult(this.pow(-1));
     }
 
+    /**
+     * Computes `-this.data`, and returns a Value object representing the result.
+     * @returns 
+     */
     public neg(): Value {
         return this.mult(-1);
     }
