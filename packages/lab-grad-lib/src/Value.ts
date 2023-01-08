@@ -1,7 +1,21 @@
 import _ from 'lodash'
 
+interface HasHash<K> {
+    hash: () => K
+}
+
+function isHasHash<K>(x: any): x is HasHash<K> {
+    return _.isFunction(x.hash);
+}
+
 /**
- * A map which has a default value for all keys, which will be created upon request.
+ * A map which has a default value for all keys.
+ * 
+ * If a key is requested that does not exist, it is created with the default value.
+ * 
+ * Keys can be either a valid hashable item, such as a string, or number.
+ * 
+ * It is also possible to `get`, `set`, and `getSet` using a `HasHash` object -- which should produce a unique hash.
  */
 class MapWithDefault<K, V> extends Map<K, V>{
     constructor(readonly defaultVal: V | (() => V), entries?: readonly (readonly [K, V])[]) {
@@ -14,7 +28,11 @@ class MapWithDefault<K, V> extends Map<K, V>{
 
     // This function is guaranteed to always return a value, even if the key doesn't exist.
     // The key is also created. if it does not exist.
-    get(key: K): V {
+    get(key: K | HasHash<K>): V {
+        if (isHasHash(key)) {
+            key = key.hash();
+        }
+
         if (!super.has(key)) {
             const v = this._defaultVal();
             super.set(key, this._defaultVal());
@@ -24,17 +42,21 @@ class MapWithDefault<K, V> extends Map<K, V>{
         // @ts-ignore
         return super.get(key);
     }
-    set(key: K, value: V) {
+    set(key: K | HasHash<K>, value: V) {
+        if (isHasHash(key)) {
+            key = key.hash();
+        }
+
         return super.set(key, value);
     }
 
-    getSet(key: K, getNewValue: (v: V) => V) {
+    getSet(key: K | HasHash<K>, getNewValue: (v: V) => V) {
         const v = getNewValue(this.get(key));
         this.set(key, v);
     }
 }
 
-export class Value {
+export class Value implements HasHash<string> {
     uniqId: string = _.uniqueId(`${this.op}_`)
     data: number
 
@@ -43,10 +65,10 @@ export class Value {
     grads: MapWithDefault<string, number> = new MapWithDefault(0)
 
     // This is the function that will be called when the backward pass is triggered.
-    // The wrt parameter is the node with respect to which the gradient is being computed.
+    // The target parameter is the node we're computing gradients for.
     // It should be initialized by the operation that created this node.
     // For leaf nodes, it should be a no-op.
-    private _backward: (wrt: Value) => void = () => { }
+    private _backward: (target: Value) => void = () => { }
 
     constructor(
         input: Value | number,
@@ -56,30 +78,16 @@ export class Value {
         this.data = input instanceof Value ? input.data : input
     }
 
-    // def backward(self):
-
-    //     # topological order all of the children in the graph
-    //     topo = []
-    //     visited = set()
-    //     def build_topo(v):
-    //         if v not in visited:
-    //             visited.add(v)
-    //             for child in v._prev:
-    //                 build_topo(child)
-    //             topo.append(v)
-    //     build_topo(self)
-
-    //     # go one variable at a time and apply the chain rule to get its gradient
-    //     self.grad = 1
-    //     for v in reversed(topo):
-    //         v._backward()
-
-
+    // This is used to uniquely identify the node.
+    hash() {
+        return this.uniqId;
+    }
 
     /**
      * Computes all the gradients of the graph with respect to *this* node.
      */
     backward() {
+        // Build a topological ordering of the graph.
         const topo: Value[] = []
         const visited = new Set()
         const buildTopo = (v: Value) => {
@@ -91,8 +99,10 @@ export class Value {
         }
         buildTopo(this);
 
+        // The gradient of this node with respect to itself is 1.
         this.grads.set(this.uniqId, 1);
 
+        // Progress backwards through the graph from this node, applying the chain rule.
         topo.reverse().forEach((v) => v._backward(this));
     }
 
@@ -106,10 +116,9 @@ export class Value {
         const out = new Value(this.data + vOther.data, '+', [this, vOther])
 
         // Backward pass, respective to a particular node.
-        out._backward = (wrt: Value) => {
-            const id = wrt.uniqId;
-            this.grads.getSet(id, (curVal) => curVal + out.grads.get(id));
-            vOther.grads.getSet(id, (curVal) => curVal + out.grads.get(id));
+        out._backward = (target: Value) => {
+            this.grads.getSet(target, (curVal) => curVal + out.grads.get(target));
+            vOther.grads.getSet(target, (curVal) => curVal + out.grads.get(target));
         }
 
         return out;
@@ -127,12 +136,11 @@ export class Value {
         const out = new Value(this.data * vOther.data, '*', [this, vOther])
 
         // Backward pass, respective to a particular node.
-        out._backward = (wrt: Value) => {
-            const id = wrt.uniqId;
+        out._backward = (target: Value) => {
             // self.grad += other.data * out.grad
-            this.grads.getSet(id, (curVal) => curVal + vOther.data * out.grads.get(id));
+            this.grads.getSet(target, (curVal) => curVal + vOther.data * out.grads.get(target));
             // other.grad += self.data * out.grad
-            vOther.grads.getSet(id, (curVal) => curVal + this.data * out.grads.get(id));
+            vOther.grads.getSet(target, (curVal) => curVal + this.data * out.grads.get(target));
         }
 
         return out;
@@ -150,10 +158,9 @@ export class Value {
         const vOther = new Value(other)
         const out = new Value(this.data ** vOther.data, '^', [this, vOther])
 
-        out._backward = (wrt: Value) => {
-            const id = wrt.uniqId;
+        out._backward = (target: Value) => {
             // self.grad += (other * self.data**(other-1)) * out.grad
-            this.grads.getSet(id, (cur) => cur + (other * (this.data ** (other - 1))) * out.grads.get(id));
+            this.grads.getSet(target, (cur) => cur + (other * (this.data ** (other - 1))) * out.grads.get(target));
         }
 
         return out
@@ -166,10 +173,9 @@ export class Value {
     public relu(): Value {
         const out = new Value(this.data < 0 ? 0 : this.data, 'ReLU', [this])
 
-        out._backward = (wrt: Value) => {
-            const id = wrt.uniqId;
+        out._backward = (target: Value) => {
             // self.grad += (out.data > 0) * out.grad
-            this.grads.getSet(id, (cur) => cur + (this.data > 0 ? out.grads.get(id) : 0));
+            this.grads.getSet(target, (cur) => cur + (this.data > 0 ? out.grads.get(target) : 0));
         }
 
         return out;
@@ -218,8 +224,8 @@ export class Value {
     //     this.data = Math.exp(this.data)
 
     //     // Backward pass, respective to a particular node.
-    //     this._backward = (wrt: Value) => {
-    //         const id = wrt.uniqId;
+    //     this._backward = (target: Value) => {
+    //         const id = target.uniqId;
     //         // self.grad += (other * self.data**(other-1)) * out.grad
     //         this.grads.getSet(id, (cur) => cur + (other * (this.data ** (other - 1))) * out.grads.get(id));
     //     }
