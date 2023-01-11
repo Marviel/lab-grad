@@ -3,5 +3,5 @@ This is a (WIP :) typescript implemenation of a Pytorch-style autograd library, 
 
 The underlying Autograd library, `packages/lab-grad-lib`, is directly inspired by [Andrej Karpathy's excellent "Micrograd" library](https://github.com/karpathy/micrograd).
 
-# Main Files
+### Main Files
 - [packages/lab-grad-lib/src/Value.ts](https://github.com/Marviel/lab-grad/blob/main/packages/lab-grad-lib/src/Value.ts): The core Autograd Engine
