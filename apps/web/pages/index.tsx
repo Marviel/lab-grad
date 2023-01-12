@@ -1,10 +1,11 @@
-import { Button } from "ui";
+import React, { useEffect, useMemo } from "react";
 
-export default function Web() {
+import NoSsr from "../components/NoSsr";
+import { Web } from "./Web";
+
+// We disable server side rendering for the entire application.
+export default function App() {
   return (
-    <div>
-      <h1>Web</h1>
-      <Button />
-    </div>
-  );
+    <NoSsr><Web /></NoSsr>
+  )
 }
