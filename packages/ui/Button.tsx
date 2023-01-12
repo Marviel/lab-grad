@@ -1,4 +1,3 @@
 import * as React from "react";
-export const Button = () => {
-  return <button>Boop</button>;
-};
+import { Button as MUIButton } from "@mui/material"
+export const Button = MUIButton;
