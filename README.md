@@ -31,6 +31,6 @@ The underlying Autograd library, `packages/lab-grad-lib`, is directly inspired b
 - [ ] Implement Tensor visualization
 #### Later
 - [ ] Implement Transformers
-- [ ] WASM or Rust bindings for Matrix Math optimization
+- [ ] WASM or Rust bindings for Tensor Math optimization
 - [ ] Implement Semi-GPT-2
 - [ ] Implement Stable Diffusion
