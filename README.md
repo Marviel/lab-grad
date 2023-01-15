@@ -39,8 +39,8 @@ This output shows that the network is able to learn the XOR function.
 #### Now
 - [x] Implement the `Value` object from Micrograd -- i.e. non-tensor math
 - [x] Implement basic Webpage for In-Browser Neuron visualization
-- [ ] Implement simple classification training loop using Value object -- with visual I/O
-- [ ] Visualize neuron gradients during learning task
+- [x] Implement simple classification training loop using Multilayer Perceptron
+- [ ] Visualize simple XOR classification in browser.
 - [ ] Blogpost explaining progress
 - [ ] Ship webpage
 #### Next
