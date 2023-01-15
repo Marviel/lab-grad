@@ -13,8 +13,8 @@
     },
     "test": {   
     },
-    "test:watchAll": {
-      
+    "test:watch": {
+
     }
   }
 }

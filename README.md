@@ -9,6 +9,23 @@ Because it is in Typescript, it should run in your browser.
 
 The underlying Autograd library, `packages/lab-grad-lib`, is directly inspired by [Andrej Karpathy's excellent "Micrograd" library](https://github.com/karpathy/micrograd).
 
+### Getting Started
+Right now the main thing we have working is the neural net.
+
+To see it in action, navigate to `packages/lab-grad-lib/tests/value/classification.test.ts`.
+
+Then, run the command `yarn test`. You should see output like:
+
+```
+...
+[can learn XOR]: avg loss first third: 0.014159401968238169
+[can learn XOR]: avg loss middle third: 0.0009761446105652113
+[can learn XOR]: avg loss last third: 0.000546596923844534
+...
+```
+
+This output shows that the network is able to learn the XOR function.
+
 ### Main Files
 - [packages/lab-grad-lib/src/Value.ts](https://github.com/Marviel/lab-grad/blob/main/packages/lab-grad-lib/src/Value.ts): The core Autograd Engine
 
