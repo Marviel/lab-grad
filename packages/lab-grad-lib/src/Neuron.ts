@@ -4,6 +4,7 @@ import { Value } from "./Value";
 export interface NeuronOptions {
     // This is a function that takes a Value and returns a Value.
     // It is generally used to apply a nonlinearity to the output of a neuron.
+    // The default value is `tanh`.
     applyNonlinearity: (x: Value) => Value;
 }
 
@@ -13,6 +14,12 @@ export function getDefaultNeuronOptions(): NeuronOptions {
     }
 }
 
+/**
+ * A single neuron.
+ * 
+ * @param numInputs The number of inputs to this neuron.
+ * @param opts Options for this neuron.
+ */
 export class Neuron {
     bias: Value;
     weights: Value[];
