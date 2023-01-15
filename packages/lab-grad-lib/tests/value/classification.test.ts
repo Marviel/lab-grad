@@ -2,14 +2,12 @@ import _, { random } from 'lodash';
 import { newVal, Value } from '../../src/Value'
 // import console from 'console';
 import { Neuron } from '../../src/Neuron';
-import { average } from '../../src/utils/Math';
+import { average, randomArray } from '../../src/utils/Math';
 import { MLP } from '../../src/MLP';
 import { createSimpleLogger } from '../../src/utils/logging';
 import { trainer } from '../../src/Train';
 
-function randomArray(length: number, low: number, high: number) {
-    return _.range(0, length).map(() => _.random(low, high));
-}
+
 
 test('can learn XOR', () => {
     const logger = createSimpleLogger('can learn XOR', false);
@@ -80,21 +78,17 @@ test('can learn XOR', () => {
 
 
 
-test('trainer can learn XOR', () => {
+test('trainer can learn XOR', async () => {
 
     const logger = createSimpleLogger('trainer can learn XOR', false);
     // Our target function is a simple XOR function.
     const targetFunction = (x: number, z: number) => +(x != z);
 
     // Create the model.
-    // Create a simple neural network with two inputs, one hidden layer with two nodes, and one output node.
-    const mlp = new MLP(2, [2, 2, 1]);
+    // Create a simple neural network with two inputs, one hidden layer with three nodes, and one output node.
+    const mlp = new MLP(2, [3, 1]);
 
-    // All the params of the whole network.
-    const params = mlp.parameters;
-
-
-    const samples: { input: [Value, Value], groundTruthOutput: [Value] }[] = _.range(0, 1000).map((idx) => {
+    const samples: { input: [Value, Value], groundTruthOutput: [Value] }[] = _.range(0, 10000).map((idx) => {
         const [x, z] = randomArray(2, 0, 1);
         return {
             input: [new Value(x), new Value(z)],
@@ -102,23 +96,22 @@ test('trainer can learn XOR', () => {
         }
     })
 
-    const trainerResults = trainer<[Value, Value], [Value]>({
+    const trainerResults = await trainer<[Value, Value], [Value]>({
         getParameters: () => mlp.parameters,
         samples,
         // TODO augment multi-layer perceptron type system to properly check array types.
         predict: (input) => mlp.run([input[0], input[1]]) as [Value],
         computeLoss: (output, groundTruthOutput) => {
-            // Add the outputs of the hidden layer.
-            const summedOutput = output.reduce((acc, o) => acc.add(o))
-
             // Loss is squared difference between the summed output of the last hidden layer,
             // and the ground truth output.
-            return summedOutput.sub(groundTruthOutput[0]).pow(2)
+            return output[0].sub(groundTruthOutput[0]).pow(2)
         },
         learningRate: 0.05
     })
 
     const losses = trainerResults.map((r) => r.lossData)
+
+    console.log(losses);
 
     const avgLossFirstThird = average(losses.slice(0, losses.length / 3))
     const avgLossMiddleThird = average(losses.slice(losses.length / 3, losses.length / 3 * 2))

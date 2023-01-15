@@ -3,7 +3,7 @@ import { MLP } from "./MLP";
 import { createSimpleLogger } from "./utils/logging";
 import { newVal, Value } from "./Value";
 
-interface TrainerOptions<TInput extends Value[], TOutput extends Value[]> {
+export interface TrainerOptions<TInput extends Value[], TOutput extends Value[]> {
     // A set of training samples.
     // Each sample is an object with an input and an output.
     samples: { input: [...TInput]; groundTruthOutput: [...TOutput] }[];
@@ -24,6 +24,9 @@ interface TrainerOptions<TInput extends Value[], TOutput extends Value[]> {
 
     learningRate?: number;
 
+    // If provided, this will be called after each sample is processed.
+    sampleCompleteCallback?: (sampleResult: TrainerSampleResult & { loss: Value }) => void;
+
     // Sample splitting.
     // If provided, will split the samples into a training set and a validation set.
     // This helps prevent overfitting.
@@ -34,9 +37,11 @@ interface TrainerOptions<TInput extends Value[], TOutput extends Value[]> {
 
     // Samples per epoch. Defaults to the number of samples.
     samplesPerEpoch?: number;
+
+    stepTime?: number;
 }
 
-interface TrainerSampleResult {
+export interface TrainerSampleResult {
     // The loss for this sample.
     lossData: number;
     // The predicted outputs for this sample.
@@ -45,18 +50,51 @@ interface TrainerSampleResult {
     sample: { input: Value[]; groundTruthOutput: Value[] };
 }
 
-export function trainer<TIn extends Value[], TOut extends Value[]>(opts: TrainerOptions<TIn, TOut>) {
-    const logger = createSimpleLogger('train', false);
+async function resolvePromisesSeq<T>(tasks: Promise<T>[]) {
+    const results = [];
+    for (const task of tasks) {
+        results.push(await task);
+    }
 
-    const params = opts.getParameters();
-    const sampleResults: TrainerSampleResult[] = []
+    return results;
+};
 
-    const learningRate = opts.learningRate || 0.1;
+function delay(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-    _.forEach(opts.samples, (sample) => {
+
+export class Trainer {
+    private stepIndex: number = 0;
+    private params: Value[] = [];
+    constructor(private opts: TrainerOptions<any, any>) {
+        this.params = opts.getParameters();
+    }
+
+    getNextSample() {
+        return this.opts.samples[this.stepIndex];
+    }
+
+    // Runs the next sample, and updates the index.
+    runNextStep() {
+        const { opts } = this;
+        const { learningRate = 0.1 } = opts;
+        const sample = this.getNextSample()
+
+        this.runSample(sample);
+
+        this.stepIndex += 1;
+    }
+
+    // Runs a sample.
+    // Does NOT update the step index.
+    runSample(sample: { input: Value[]; groundTruthOutput: Value[] }) {
+        const { opts } = this;
+        const { learningRate = 0.1 } = opts;
+
         // Forward pass.
         // Run the inputs through the model to get our prediction.
-        const predictedOutput = opts.predict(sample.input);
+        const predictedOutput = this.opts.predict(sample.input);
 
         // Determine the loss for this sample.
         // This is the difference between the predicted output and the ground truth output.
@@ -64,7 +102,7 @@ export function trainer<TIn extends Value[], TOut extends Value[]>(opts: Trainer
         const loss = opts.computeLoss(sample.groundTruthOutput, predictedOutput)
 
         // Clear the gradients for our parameters.
-        params.forEach((p) => p.grads.clear())
+        this.params.forEach((p) => p.grads.clear())
 
         // Backpropagate the loss to get the gradient for each parameter.
         loss.backward();
@@ -72,23 +110,39 @@ export function trainer<TIn extends Value[], TOut extends Value[]>(opts: Trainer
         // Update the model parameters using the gradients.
         // Basically -- how did this parameter affect the loss?
         // We adjust this parameter slightly such that the loss should be reduced.
-        params.forEach((p) => p.data += -learningRate * p.grads.get(loss.uniqId));
+        this.params.forEach((p) => p.data += -learningRate * p.grads.get(loss.uniqId));
 
-        sampleResults.push({
+        const sampleResult = {
             lossData: loss.data,
             predictedOutput: predictedOutput.map((p) => p.data),
             sample,
-        });
-    })
+        }
 
-    return sampleResults;
+        // Call our callback.
+        opts.sampleCompleteCallback && opts.sampleCompleteCallback({ ...sampleResult, loss });
+
+        return sampleResult;
+    }
+
+    runAllSteps() {
+        return this.opts.samples.map((sample) => {
+            return this.runSample(sample);
+        })
+    }
 }
 
 
 
-function array<X extends unknown[]>(x: [...X]): [...X] {
-    return [1, 2, 3] as any
+// TODO make it to where we can run a single cycle of trainer at once. Probably requires a Trainer object.
+
+export async function trainer<TIn extends Value[], TOut extends Value[]>(opts: TrainerOptions<TIn, TOut>): Promise<TrainerSampleResult[]> {
+    const logger = createSimpleLogger('train', false);
+
+    const params = opts.getParameters();
+
+    const learningRate = opts.learningRate || 0.1;
+
+    const trainer = new Trainer(opts);
+
+    return trainer.runAllSteps();
 }
-
-
-const ret = array([new Value(1), new Value(2), new Value(3), new Value(4)])

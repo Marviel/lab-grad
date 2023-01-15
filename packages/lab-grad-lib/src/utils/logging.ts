@@ -1,4 +1,4 @@
-const nodeConsole = require('console');
+const nodeConsole = console;
 
 export function createSimpleLogger(logTag: string, overrideConsole = false) {
     const theconsole = overrideConsole ? nodeConsole : console;
