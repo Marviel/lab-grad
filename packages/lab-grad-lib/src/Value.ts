@@ -219,6 +219,45 @@ export class Value implements HasHash<string> {
         return this.mult(-1);
     }
 
+    public tanh(): Value {
+        const x = this.data
+        // t = (math.exp(2*x) - 1)/(math.exp(2*x) + 1)
+        const t = (Math.exp(2 * x) - 1) / (Math.exp(2 * x) + 1)
+        const out = new Value(t, 'tanh', [this])
+
+        out._backward = (target: Value) => {
+            // self.grad += (1 - t**2) * out.grad
+            this.grads.getSet(target, (cur) => cur + (1 - t ** 2) * out.grads.get(target));
+        }
+
+        return out;
+    }
+
+    public exp(): Value {
+        const x = this.data;
+        // out = Value(math.exp(x), (self, ), 'exp')
+        const out = new Value(Math.exp(x), 'exp', [this]);
+
+        // def _backward():
+        //   self.grad += out.data * out.grad # NOTE: in the video I incorrectly used = instead of +=. Fixed here.
+        out._backward = (target: Value) => {
+            this.grads.getSet(target, (cur) => cur + out.data * out.grads.get(target));
+        }
+
+        return out;
+    }
+
+    /**
+     * Gets the first gradient found on this node.
+     * 
+     * Useful when only calculating gradients for a single node.
+     * @returns The first gradient found.
+     */
+    public get grad(): number | undefined {
+        const v = this.grads.entries().next().value;
+        return v ? v[1] : undefined;
+    }
+
     // TODO
     // public exp(): Value {
     //     this.data = Math.exp(this.data)
@@ -258,6 +297,13 @@ export class Value implements HasHash<string> {
     // }
 }
 
-export function newVal(input: Value | number): Value {
-    return new Value(input)
+/**
+ * Create a new value from the given data.
+ * 
+ * If no value is provided, will initialize the value to a random number between -1 and 1.
+ * @param input 
+ * @returns 
+ */
+export function newVal(input?: Value | number | undefined): Value {
+    return new Value(input !== undefined ? input : _.random(-1, 1, true))
 }

@@ -28,7 +28,6 @@ test('this + this backward works correctly', () => {
     expect(b.grads.get(b.uniqId)).toBe(1);
 })
 
-
 test('pytorch basic backward works correctly', () => {
     // x = torch.Tensor([-4.0]).double()
     // x.requires_grad = True
