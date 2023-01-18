@@ -4,7 +4,7 @@ This is a (WIP :) Typescript implemenation of a Pytorch-style autograd library, 
 Because it is in Typescript, it should run in your browser.
 
 
->  For now, Lab-Grad is only intended for educational purposes :) If you want to run neural networks in your browser in a more production-friendly way, check out ONNX.
+>  ❗️ For now, Lab-Grad is only intended for educational purposes :) If you want to run neural networks in your browser in a more production-friendly way, check out ONNX.
 
 
 The underlying Autograd library, `packages/lab-grad-lib`, is directly inspired by [Andrej Karpathy's excellent "Micrograd" library](https://github.com/karpathy/micrograd).
